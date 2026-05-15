@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#db0f16">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Timesheet">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>Timesheet — VANMULDERS</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0f4f8;--bg2:#fff;--bg3:#f8fafc;
+  --border:#e2e8f0;--border2:#cbd5e1;
+  --accent:#db0f16;--accent2:#b50c12;
+  --text:#1e293b;--text2:#475569;--text3:#94a3b8;
+  --green:#059669;--green-bg:#ecfdf5;--red:#dc2626;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+  --r:6px;--r2:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px;opacity:.5;pointer-events:none;z-index:0}
+.app{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:20px 20px 40px}
+
+/* Header */
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.hdr-l{display:flex;align-items:center;gap:12px}
+.logo{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.logo svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round}
+.app-title{font-family:var(--mono);font-size:15px;font-weight:500;letter-spacing:.05em}
+.user-badge{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:4px;background:var(--bg3);color:var(--accent);border:1px solid var(--border2)}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;margin-bottom:16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:3px}
+.tab{flex:1;padding:7px 0;font-size:12px;font-family:var(--mono);font-weight:500;text-align:center;cursor:pointer;border:none;background:transparent;color:var(--text3);border-radius:7px;transition:all .15s}
+.tab.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.pane{display:none}.pane.active{display:block}
+
+/* Date nav */
+.dnav{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.dnav input[type=date]{height:30px;font-size:12px;font-family:var(--mono);flex:1;padding:0 8px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg3);color:var(--text)}
+.dnav input[type=date]:focus{outline:none;border-color:var(--accent)}
+.ibtn{height:30px;min-width:30px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);padding:0 10px;font-size:11px;font-family:var(--mono);white-space:nowrap}
+.ibtn:hover{border-color:var(--accent);color:var(--accent)}
+.day-lbl{font-family:var(--mono);font-size:12px;color:var(--text2);white-space:nowrap}
+
+/* Form */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:14px}
+.row1{display:grid;grid-template-columns:1fr 1fr 2fr 2fr;gap:10px;margin-bottom:10px}
+.row2{display:grid;grid-template-columns:2fr 2fr 2fr auto auto;gap:10px;align-items:end}
+.settings-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.flabel{font-size:11px;font-family:var(--mono);color:var(--text3);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em}
+input[type=text],input[type=date],select{width:100%;font-size:13px;height:36px;padding:0 11px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg3);color:var(--text);font-family:var(--sans)}
+input[type=text]:focus,select:focus{outline:none;border-color:var(--accent)}
+
+/* Time input */
+.twrap{position:relative}
+.tinput{width:100%;height:36px;padding:0 34px 0 11px;font-size:13px;font-family:var(--mono);border:1px solid var(--border);border-radius:var(--r);background:var(--bg3);color:var(--text)}
+.tinput:focus{outline:none;border-color:var(--accent)}
+.tinput.err{border-color:var(--red);background:#fff5f5}
+.tinput::placeholder{color:var(--text3)}
+.clock-btn{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);padding:3px;border-radius:4px;display:flex;align-items:center}
+.clock-btn:hover{color:var(--accent)}
+
+/* Clock popup */
+.cwrap{position:relative}
+.cpop{display:none;position:absolute;z-index:400;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:14px;width:230px;top:calc(100% + 4px);left:0;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.cpop.open{display:block}
+.cdisp{text-align:center;font-size:26px;font-weight:500;font-family:var(--mono);color:var(--text);margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:2px}
+.cseg{cursor:pointer;padding:2px 5px;border-radius:4px}.cseg.on{color:var(--accent)}
+.cmode{display:flex;gap:4px;justify-content:center;margin-bottom:8px}
+.cmbtn{font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--mono)}
+.cmbtn.on{background:var(--bg3);color:var(--text);border-color:var(--border2)}
+.csvg{display:block;margin:0 auto 6px;cursor:pointer}
+.chint{text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px}
+.cact{display:flex;gap:6px}
+.cact button{flex:1;height:28px;font-size:12px;border-radius:var(--r);cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:var(--sans)}
+.cok{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important}
+.cnow{margin-left:8px;font-size:10px;height:22px;padding:0 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--mono)}
+.cnow:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Preview */
+.preview{height:36px;display:flex;align-items:center;font-size:12px;color:var(--text3);padding:0 11px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg3);overflow:hidden;white-space:nowrap;font-family:var(--mono)}
+
+/* Buttons */
+.btn-add{height:36px;padding:0 18px;font-size:13px;font-weight:500;border-radius:var(--r);cursor:pointer;white-space:nowrap;background:var(--accent);color:#fff;border:none;font-family:var(--sans)}
+.btn-add:hover{background:var(--accent2)}
+.btn-outline{height:36px;padding:0 12px;font-size:12px;border-radius:var(--r);cursor:pointer;white-space:nowrap;background:transparent;color:var(--text2);border:1px solid var(--border);font-family:var(--sans)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+.btn-action{height:36px;padding:0 14px;font-size:12px;cursor:pointer;border-radius:var(--r);background:var(--bg2);border:1px solid var(--border2);color:var(--text2);display:flex;align-items:center;gap:6px;font-family:var(--sans)}
+.btn-action:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Table */
+.tcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}
+.thead{display:grid;grid-template-columns:30px 64px 52px 52px 130px 1fr 56px 1.5fr 30px;gap:6px;padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:10px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.trow{display:grid;grid-template-columns:30px 64px 52px 52px 130px 1fr 56px 1.5fr 30px;gap:6px;padding:9px 12px;border-bottom:1px solid var(--border);align-items:center;font-size:12px;color:var(--text)}
+.trow:last-child{border-bottom:none}
+.trow:hover{background:var(--bg3)}
+.trow.exp{opacity:.38}.trow.exp .trunc{text-decoration:line-through;color:var(--text3)}
+.expchk{width:18px;height:18px;accent-color:var(--green);cursor:pointer}
+.tv{font-family:var(--mono);font-size:12px;color:var(--accent2)}
+.dv{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.bp{font-size:10px;font-family:var(--mono);font-weight:500;padding:2px 6px;border-radius:4px;white-space:nowrap;background:#fff5f5;color:var(--accent);border:1px solid #fecdd3}
+.durv{font-family:var(--mono);font-size:11px;color:var(--green)}
+.iproj{font-size:11px;font-family:var(--mono);height:26px;padding:0 7px;width:100%;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text2)}
+.iproj:focus{outline:none;border-color:var(--accent);background:var(--bg3);color:var(--text)}
+.bdel{background:none;border:none;cursor:pointer;color:var(--text3);padding:3px;border-radius:4px;display:flex;align-items:center;justify-content:center}
+.bdel:hover{background:#fee2e2;color:var(--red)}
+.trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{padding:2rem;text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px}
+
+/* Footer */
+.foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.stats{display:flex;gap:10px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:9px 16px}
+.stat .sl{font-size:10px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.stat .sv{font-size:20px;font-family:var(--mono);font-weight:500;color:var(--accent);margin-top:2px}
+.foot-r{display:flex;gap:8px;align-items:center}
+
+/* Templates */
+.tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.tpl-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;cursor:pointer;transition:border-color .15s;position:relative}
+.tpl-card:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(219,15,22,.08)}
+.tpl-name{font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px}
+.tpl-det{font-size:11px;font-family:var(--mono);color:var(--text3)}
+.tpl-x{position:absolute;top:6px;right:6px;background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:2px 4px;border-radius:3px;opacity:0;line-height:1}
+.tpl-card:hover .tpl-x{opacity:1}
+.tpl-x:hover{color:var(--red)}
+.tpl-empty{padding:2rem;text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px;background:var(--bg2);border:1px dashed var(--border);border-radius:var(--r2)}
+
+/* Week */
+.wnav{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.wlbl{flex:1;text-align:center;font-family:var(--mono);font-size:13px;color:var(--text)}
+.wgrid{display:grid;gap:8px;margin-bottom:12px}
+.wday{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.wdhdr{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border);cursor:pointer;user-select:none}
+.wdhdr:hover{background:#f1f5f9}
+.wdname{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text)}
+.wdname.today{color:var(--accent)}
+.wdtot{font-family:var(--mono);font-size:12px;color:var(--green)}
+.wentries{display:block}
+.wday.collapsed .wentries{display:none}
+.wrow{display:grid;grid-template-columns:52px 52px 1fr auto;gap:6px;padding:7px 12px;border-bottom:1px solid var(--border);font-size:12px;align-items:center}
+.wrow:last-child{border-bottom:none}
+.wtots{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px}
+.wtitle{font-size:11px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.wstat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px}
+.wstat{background:var(--bg3);border-radius:var(--r);padding:8px 12px}
+.wstat-l{font-size:11px;color:var(--text3);margin-bottom:2px}
+.wstat-v{font-family:var(--mono);font-size:14px;font-weight:500;color:var(--text)}
+.wgrand{background:var(--bg3);border-radius:var(--r);padding:12px 16px;margin-top:10px;display:flex;align-items:center;justify-content:space-between}
+.wgrand-l{font-size:12px;color:var(--text2)}
+.wgrand-v{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--accent)}
+
+/* Data tab */
+.data-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.drop-zone{border:2px dashed var(--border2);border-radius:var(--r2);padding:20px;text-align:center;cursor:pointer;transition:border-color .15s}
+.drop-zone:hover{border-color:var(--accent)}
+.dthead{display:grid;grid-template-columns:72px 48px 48px 1fr 90px 56px 60px;gap:6px;padding:7px 12px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:10px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.dtrow{display:grid;grid-template-columns:72px 48px 48px 1fr 90px 56px 60px;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;align-items:center}
+.dtrow:last-child{border-bottom:none}
+.dtbody{max-height:380px;overflow-y:auto}
+
+.slbl{font-size:11px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;display:block}
+.quick-tpls{display:flex;gap:6px;flex-wrap:wrap;min-height:30px;align-items:center}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- Header -->
+<div class="hdr">
+  <div class="hdr-l">
+    <div class="logo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg></div>
+    <span class="app-title">TIMESHEET</span>
+    <span class="user-badge">VANMULDERS</span>
+  </div>
+  <span id="hdr-date" style="font-family:var(--mono);font-size:12px;color:var(--text2)"></span>
+</div>
+
+<!-- Tabs -->
+<div class="tabs" id="main-tabs">
+  <button class="tab active" onclick="showTab('dag')">📋 Dag</button>
+  <button class="tab" onclick="showTab('week')">📅 Week</button>
+  <button class="tab" onclick="showTab('templates')">⚡ Templates</button>
+  <button class="tab" onclick="showTab('data')">💾 Data</button>
+</div>
+
+<!-- ══ DAG ══ -->
+<div class="pane active" id="pane-dag">
+
+  <div class="dnav">
+    <button class="ibtn" onclick="navDay(-1)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <input type="date" id="f-date" onchange="onDateChange()">
+    <button class="ibtn" onclick="goToday()">Vandaag</button>
+    <span class="day-lbl" id="day-lbl"></span>
+    <button class="ibtn" onclick="navDay(1)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+  </div>
+
+  <div class="settings-row">
+    <div><label class="flabel">Default project</label><input type="text" id="f-defproject" value="CGI CUST DELIVERY"></div>
+    <div>
+      <label class="flabel">Snel invoegen</label>
+      <div class="quick-tpls" id="quick-tpls"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row1">
+      <div>
+        <label class="flabel">Van</label>
+        <div class="cwrap" id="cwrap-start">
+          <div class="twrap">
+            <input class="tinput" id="ti-start" placeholder="8:00" maxlength="5" oninput="onTI(event,'start')" onblur="onTB('start')" onkeydown="onTK(event,'start')">
+            <button class="clock-btn" onclick="openClock('start')" tabindex="-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg></button>
+          </div>
+          <div class="cpop" id="cpop-start"></div>
+        </div>
+      </div>
+      <div>
+        <label class="flabel">Tot</label>
+        <div class="cwrap" id="cwrap-end">
+          <div class="twrap">
+            <input class="tinput" id="ti-end" placeholder="10:00" maxlength="5" oninput="onTI(event,'end')" onblur="onTB('end')" onkeydown="onTK(event,'end')">
+            <button class="clock-btn" onclick="openClock('end')" tabindex="-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg></button>
+          </div>
+          <div class="cpop" id="cpop-end"></div>
+        </div>
+      </div>
+      <div><label class="flabel">Klant</label><input type="text" id="f-client" placeholder="Klantnaam…" list="dl-clients"><datalist id="dl-clients"></datalist></div>
+      <div><label class="flabel">Omschrijving</label><input type="text" id="f-desc" placeholder="Wat heb je gedaan?" onkeydown="if(event.key==='Enter')addEntry()"></div>
+    </div>
+    <div class="row2">
+      <div>
+        <label class="flabel">Product</label>
+        <input type="text" id="f-product" placeholder="Kies of typ…" list="dl-products" autocomplete="off">
+        <datalist id="dl-products"></datalist>
+      </div>
+      <div><label class="flabel">Project <span style="text-transform:none;font-size:10px;color:var(--text3)">(leeg=default)</span></label><input type="text" id="f-project" placeholder="CGI CUST DELIVERY" list="dl-projects"><datalist id="dl-projects"></datalist></div>
+      <div><label class="flabel">Preview</label><div class="preview" id="preview">—</div></div>
+      <div style="align-self:end"><button class="btn-outline" onclick="saveTemplate()">⚡ Template</button></div>
+      <div style="align-self:end"><button class="btn-add" onclick="addEntry()">+ Toevoegen</button></div>
+    </div>
+  </div>
+
+  <div class="tcard">
+    <div class="thead"><span title="Geëxporteerd">✓</span><span>Datum</span><span>Van</span><span>Tot</span><span>Product</span><span>Project</span><span>Duur</span><span>Omschrijving</span><span></span></div>
+    <div id="tbl-body"><div class="empty">// geen entries voor deze dag</div></div>
+  </div>
+
+  <div class="foot">
+    <div class="stats">
+      <div class="stat"><div class="sl">Totaal dag</div><div class="sv" id="stat-dur">0u 0m</div></div>
+      <div class="stat"><div class="sl">Entries</div><div class="sv" id="stat-n">0</div></div>
+    </div>
+    <div class="foot-r">
+      <span id="exp-count" style="font-size:11px;font-family:var(--mono);color:var(--accent2)"></span>
+      <button class="btn-action" onclick="exportNavision()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export Navision CSV
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ WEEK ══ -->
+<div class="pane" id="pane-week">
+  <div class="wnav">
+    <button class="ibtn" onclick="navWeek(-1)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="wlbl" id="wlbl"></span>
+    <button class="ibtn" onclick="navWeek(1)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+    <button class="ibtn" onclick="weekOff=0;renderWeek()">Deze week</button>
+  </div>
+  <div id="wgrid" class="wgrid"></div>
+  <div id="wtots"></div>
+</div>
+
+<!-- ══ TEMPLATES ══ -->
+<div class="pane" id="pane-templates">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <span class="slbl" style="margin-bottom:0">Opgeslagen templates</span>
+    <span style="font-size:11px;font-family:var(--mono);color:var(--text3)">Klik om in te vullen</span>
+  </div>
+  <div id="tpl-grid" class="tpl-grid"></div>
+</div>
+
+<!-- ══ DATA ══ -->
+<div class="pane" id="pane-data">
+  <div class="data-grid">
+
+    <!-- Export -->
+    <div class="card" style="margin-bottom:0">
+      <span class="slbl">Export</span>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+        <button class="btn-action" style="width:100%;height:40px;font-size:13px;justify-content:flex-start" onclick="exportAllCSV()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download alle data als CSV
+          <span style="font-size:11px;color:var(--text3);margin-left:auto">Excel</span>
+        </button>
+        <button class="btn-action" style="width:100%;height:40px;font-size:13px;justify-content:flex-start" onclick="exportJSON()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download backup als JSON
+          <span style="font-size:11px;color:var(--text3);margin-left:auto">Backup</span>
+        </button>
+      </div>
+      <div id="data-stats" style="padding:10px;background:var(--bg3);border-radius:var(--r);font-size:11px;font-family:var(--mono);color:var(--text3)"></div>
+    </div>
+
+    <!-- Import -->
+    <div class="card" style="margin-bottom:0">
+      <span class="slbl">Import (restore backup)</span>
+      <div class="drop-zone" onclick="document.getElementById('json-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="onDrop(event)">
+        <div style="font-size:28px;margin-bottom:8px">📂</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:4px">Klik of sleep JSON-bestand</div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">Eerder geëxporteerde backup</div>
+        <input type="file" id="json-input" accept=".json" style="display:none" onchange="onFileImport(this.files[0])">
+      </div>
+      <div id="import-msg" style="margin-top:10px;font-size:12px;font-family:var(--mono);color:var(--text3);min-height:18px"></div>
+    </div>
+  </div>
+
+  <!-- Data table -->
+  <div class="tcard">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border)">
+      <span style="font-size:10px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Alle entries</span>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="dt-search" placeholder="Zoeken…" style="height:28px;font-size:12px;width:150px;padding:0 8px" oninput="renderDataTable()">
+        <select id="dt-month" style="height:28px;font-size:12px;width:130px;padding:0 6px" onchange="renderDataTable()">
+          <option value="">Alle maanden</option>
+        </select>
+      </div>
+    </div>
+    <div class="dthead"><span>Datum</span><span>Van</span><span>Tot</span><span>Omschrijving</span><span>Product</span><span>Duur</span><span>Export</span></div>
+    <div class="dtbody" id="dt-body"></div>
+  </div>
+</div>
+
+</div><!-- .app -->
+<script>
+'use strict';
+// ── Constants ──────────────────────────────────────────────────
+const USER = 'VANMULDERS';
+const ACTIVITY = 'PRJ MGMT';
+const DEFAULT_PRODUCTS = ['COMPLAINTS','BI-WEEKLY','CSS IT','RECURRING MEETINGS','METHODOLOGY'];
+const DAYS = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
+
+// ── State ──────────────────────────────────────────────────────
+let curDate = isoToday();
+let entries = [];
+let weekOff = 0;
+let CS = { target: null, mode: 'hours', h: 8, m: 0 };
+
+// ── Utilities ──────────────────────────────────────────────────
+function isoToday() { return new Date().toISOString().slice(0,10); }
+function pad(n) { return String(n).padStart(2,'0'); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function q(v) { return '"' + String(v||'').replace(/"/g,'""') + '"'; }
+function fmtDate(iso) { const [y,mo,d]=iso.split('-'); return d+'/'+mo+'/'+y.slice(2); }
+function fmtTime(t) { if(!t) return ''; const [h,m]=t.split(':'); return ' '+h+':'+m+':00'; }
+function fmtDur(m) { return Math.floor(m/60)+'u '+(m%60)+'m'; }
+function calcDur(s,e) {
+  const [sh,sm]=s.split(':').map(Number), [eh,em]=e.split(':').map(Number);
+  const d=(eh*60+em)-(sh*60+sm); return d>0?d:null;
+}
+function defProj() { return (document.getElementById('f-defproject').value||'').trim() || 'CGI CUST DELIVERY'; }
+
+// ── Storage ────────────────────────────────────────────────────
+function loadEntries(date) {
+  try { return JSON.parse(localStorage.getItem('ts_pwa_'+date)||'[]'); } catch(e) { return []; }
+}
+function saveEntries(date, arr) {
+  try { localStorage.setItem('ts_pwa_'+date, JSON.stringify(arr)); } catch(e) {}
+}
+function loadTemplates() {
+  try { return JSON.parse(localStorage.getItem('ts_templates')||'[]'); } catch(e) { return []; }
+}
+function saveTemplates(arr) {
+  try { localStorage.setItem('ts_templates', JSON.stringify(arr)); } catch(e) {}
+}
+function getAllEntries() {
+  return Object.keys(localStorage).filter(k=>k.startsWith('ts_pwa_')).sort()
+    .flatMap(k=>{ try { return JSON.parse(localStorage.getItem(k)||'[]'); } catch(e) { return []; } })
+    .sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start));
+}
+
+// ── Init ───────────────────────────────────────────────────────
+function init() {
+  entries = loadEntries(curDate);
+  document.getElementById('f-date').value = curDate;
+  document.getElementById('hdr-date').textContent = new Date().toLocaleDateString('nl-BE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  updateDayLbl();
+  refreshDataLists();
+  renderQuickTpls();
+  render();
+}
+
+function updateDayLbl() {
+  const d = new Date(curDate+'T00:00:00');
+  document.getElementById('day-lbl').textContent = DAYS[d.getDay()] + (curDate===isoToday()?' (vandaag)':'');
+}
+
+// ── Tabs ───────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('#main-tabs .tab').forEach(btn => {
+    const m = btn.getAttribute('onclick').match(/showTab\('(\w+)'\)/);
+    if (m) btn.classList.toggle('active', m[1]===name);
+  });
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+  const pane = document.getElementById('pane-'+name);
+  if (pane) pane.classList.add('active');
+  if (name==='week') renderWeek();
+  if (name==='templates') renderTemplates();
+  if (name==='data') renderDataTab();
+}
+
+// ── Date navigation ────────────────────────────────────────────
+function onDateChange() {
+  curDate = document.getElementById('f-date').value;
+  entries = loadEntries(curDate);
+  updateDayLbl();
+  render();
+}
+function navDay(d) {
+  const parts = curDate.split('-').map(Number);
+  const dt = new Date(parts[0], parts[1]-1, parts[2]+d);
+  curDate = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+  document.getElementById('f-date').value = curDate;
+  entries = loadEntries(curDate);
+  updateDayLbl();
+  render();
+}
+function goToday() {
+  curDate = isoToday();
+  document.getElementById('f-date').value = curDate;
+  entries = loadEntries(curDate);
+  updateDayLbl();
+  render();
+}
+
+// ── Time input ─────────────────────────────────────────────────
+function parseT(s) {
+  if (!s) return null;
+  s = s.trim().replace(/[.,;]/g,':');
+  let h, m;
+  if (/^\d{1,2}:\d{2}$/.test(s)) { [h,m]=s.split(':').map(Number); }
+  else if (/^\d{3,4}$/.test(s)) { h=s.length===3?+s[0]:+s.slice(0,2); m=s.length===3?+s.slice(1):+s.slice(2); }
+  else if (/^\d{1,2}$/.test(s)) { h=+s; m=0; }
+  else return null;
+  if (h<0||h>23||m<0||m>59) return null;
+  return { h, m, str: pad(h)+':'+pad(m) };
+}
+function onTI(e, id) {
+  const inp = document.getElementById('ti-'+id);
+  inp.classList.remove('err');
+  let v = inp.value.replace(/[^0-9:]/g,'');
+  if (v.length===2 && !v.includes(':') && e.data && e.data!==':') v += ':';
+  if (v !== inp.value) inp.value = v;
+}
+function onTB(id) {
+  const inp = document.getElementById('ti-'+id);
+  if (!inp.value) { inp.classList.remove('err'); return; }
+  const p = parseT(inp.value);
+  if (p) { inp.value=p.str; inp.classList.remove('err'); }
+  else inp.classList.add('err');
+}
+function onTK(e, id) { if (e.key==='Enter') onTB(id); }
+function getT(id) { const p=parseT(document.getElementById('ti-'+id).value); return p?p.str:''; }
+function setT(id, h, m) { const i=document.getElementById('ti-'+id); i.value=pad(h)+':'+pad(m); i.classList.remove('err'); }
+
+// ── Clock ──────────────────────────────────────────────────────
+const SZ=206, CX=103, CY=103, RO=84, RI=55;
+
+function buildClock(id) {
+  const el = document.getElementById('cpop-'+id);
+  const isH = CS.mode==='hours';
+  const ang = isH ? ((CS.h%12)/12)*2*Math.PI-Math.PI/2 : (CS.m/60)*2*Math.PI-Math.PI/2;
+  const len = isH ? 52 : 74;
+  const hx = CX+len*Math.cos(ang), hy = CY+len*Math.sin(ang);
+  let nums = '';
+  for (let i=0; i<12; i++) {
+    const a=(i/12)*2*Math.PI-Math.PI/2;
+    const ox=CX+RO*Math.cos(a), oy=CY+RO*Math.sin(a);
+    const ix=CX+RI*Math.cos(a), iy=CY+RI*Math.sin(a);
+    if (isH) {
+      const ho=i, hi=i===0?12:i+12, so=CS.h===ho, si=CS.h===hi;
+      if(so) nums+=`<circle cx="${ox}" cy="${oy}" r="14" fill="#db0f16"/>`;
+      if(si) nums+=`<circle cx="${ix}" cy="${iy}" r="12" fill="#db0f16"/>`;
+      nums+=`<text x="${ox}" y="${oy}" text-anchor="middle" dominant-baseline="central" font-size="12" font-family="IBM Plex Mono,monospace" fill="${so?'#fff':'#475569'}" style="cursor:pointer" onclick="pickH(${ho})">${ho}</text>`;
+      nums+=`<text x="${ix}" y="${iy}" text-anchor="middle" dominant-baseline="central" font-size="10" font-family="IBM Plex Mono,monospace" fill="${si?'#fff':'#94a3b8'}" style="cursor:pointer" onclick="pickH(${hi})">${hi}</text>`;
+    } else {
+      const mn=i*5, sel=CS.m===mn;
+      if(sel) nums+=`<circle cx="${ox}" cy="${oy}" r="14" fill="#db0f16"/>`;
+      nums+=`<text x="${ox}" y="${oy}" text-anchor="middle" dominant-baseline="central" font-size="11" font-family="IBM Plex Mono,monospace" fill="${sel?'#fff':'#475569'}" style="cursor:pointer" onclick="pickM(${mn})">${pad(mn)}</text>`;
+    }
+  }
+  el.innerHTML = `
+  <div class="cdisp">
+    <span class="cseg${isH?' on':''}" onclick="setClockMode('hours')">${pad(CS.h)}</span>
+    <span style="opacity:.3;cursor:default">:</span>
+    <span class="cseg${!isH?' on':''}" onclick="setClockMode('mins')">${pad(CS.m)}</span>
+    <button class="cnow" onclick="clockNow()">Nu</button>
+  </div>
+  <div class="cmode">
+    <button class="cmbtn${isH?' on':''}" onclick="setClockMode('hours')">Uren</button>
+    <button class="cmbtn${!isH?' on':''}" onclick="setClockMode('mins')">Minuten</button>
+  </div>
+  <svg class="csvg" width="${SZ}" height="${SZ}" viewBox="0 0 ${SZ} ${SZ}" onclick="clockFaceClick(event)" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="${CX}" cy="${CY}" r="98" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    ${isH?`<circle cx="${CX}" cy="${CY}" r="68" fill="#fff" stroke="#e2e8f0" stroke-width="1" style="pointer-events:none"/>`:''}
+    <line x1="${CX}" y1="${CY}" x2="${hx}" y2="${hy}" stroke="#db0f16" stroke-width="${isH?3:2}" stroke-linecap="round" style="pointer-events:none"/>
+    <circle cx="${CX}" cy="${CY}" r="4" fill="#db0f16" style="pointer-events:none"/>
+    ${nums}
+  </svg>
+  ${isH?`<div class="chint">buiten 0–11 · binnen 12–23</div>`:''}
+  <div class="cact">
+    <button onclick="closeClock()">Annuleer</button>
+    <button class="cok" onclick="confirmClock()">OK</button>
+  </div>`;
+}
+
+function openClock(target) {
+  closeClock();
+  CS.target = target;
+  const cur = getT(target);
+  if (cur) { const [h,m]=cur.split(':').map(Number); CS.h=h; CS.m=m; }
+  else { const n=new Date(); CS.h=n.getHours(); CS.m=Math.round(n.getMinutes()/5)*5%60; }
+  CS.mode = 'hours';
+  buildClock(target);
+  document.getElementById('cpop-'+target).classList.add('open');
+  setTimeout(()=>document.addEventListener('mousedown', outsideClick), 10);
+}
+function outsideClick(e) {
+  ['start','end'].forEach(id => {
+    const pop=document.getElementById('cpop-'+id), wrap=document.getElementById('cwrap-'+id);
+    if (pop && pop.classList.contains('open') && wrap && !wrap.contains(e.target)) closeClock();
+  });
+}
+function closeClock() {
+  ['start','end'].forEach(id=>{ const el=document.getElementById('cpop-'+id); if(el) el.classList.remove('open'); });
+  document.removeEventListener('mousedown', outsideClick);
+}
+function setClockMode(m) { CS.mode=m; buildClock(CS.target); }
+function clockNow() { const n=new Date(); CS.h=n.getHours(); CS.m=Math.round(n.getMinutes()/5)*5%60; buildClock(CS.target); }
+function pickH(h) { CS.h=h; CS.mode='mins'; buildClock(CS.target); }
+function pickM(m) { CS.m=m; buildClock(CS.target); }
+function clockFaceClick(e) {
+  if (e.target.tagName==='text'||e.target.tagName==='circle') return;
+  const svg=e.currentTarget, rect=svg.getBoundingClientRect();
+  const lx=(e.clientX-rect.left)*(SZ/rect.width), ly=(e.clientY-rect.top)*(SZ/rect.height);
+  const dx=lx-CX, dy=ly-CY, dist=Math.sqrt(dx*dx+dy*dy);
+  let a=Math.atan2(dy,dx)+Math.PI/2; if(a<0) a+=2*Math.PI;
+  if (CS.mode==='hours') { const h12=Math.round(a/(2*Math.PI)*12)%12; pickH(dist<68?(h12===0?12:h12+12):h12); }
+  else pickM(Math.round(a/(2*Math.PI)*60/5)*5%60);
+}
+function confirmClock() { setT(CS.target,CS.h,CS.m); closeClock(); updatePreview(); }
+
+// ── Preview ────────────────────────────────────────────────────
+function getFullDesc() {
+  const c=(document.getElementById('f-client').value||'').trim();
+  const d=(document.getElementById('f-desc').value||'').trim();
+  if (!c&&!d) return ''; if (!c) return d; if (!d) return c; return c+' - '+d;
+}
+function updatePreview() {
+  const p=document.getElementById('preview'), v=getFullDesc();
+  p.textContent=v||'—'; p.style.color=v?'#1e293b':'#94a3b8';
+}
+document.getElementById('f-client').addEventListener('input', updatePreview);
+document.getElementById('f-desc').addEventListener('input', updatePreview);
+
+// ── DataLists ──────────────────────────────────────────────────
+function refreshDataLists() {
+  const allKeys = Object.keys(localStorage).filter(k=>k.startsWith('ts_pwa_'));
+  const clients=new Set(), projects=new Set(), products=new Set(DEFAULT_PRODUCTS);
+  allKeys.forEach(k => {
+    try { JSON.parse(localStorage.getItem(k)||'[]').forEach(x=>{ if(x.client) clients.add(x.client); if(x.project) projects.add(x.project); if(x.product) products.add(x.product); }); } catch(e) {}
+  });
+  document.getElementById('dl-clients').innerHTML = [...clients].map(c=>`<option value="${esc(c)}">`).join('');
+  document.getElementById('dl-projects').innerHTML = [...projects].map(p=>`<option value="${esc(p)}">`).join('');
+  document.getElementById('dl-products').innerHTML = [...products].map(p=>`<option value="${esc(p)}">`).join('');
+}
+
+// ── Entries ────────────────────────────────────────────────────
+function addEntry() {
+  const s=getT('start'), e=getT('end');
+  if (!s) { document.getElementById('ti-start').classList.add('err'); alert('Voer een geldige begintijd in.'); return; }
+  if (!e) { document.getElementById('ti-end').classList.add('err'); alert('Voer een geldige eindtijd in.'); return; }
+  const client=(document.getElementById('f-client').value||'').trim();
+  const desc=(document.getElementById('f-desc').value||'').trim();
+  if (!client||!desc) { alert('Vul Klant en Omschrijving in.'); return; }
+  const dur=calcDur(s,e);
+  if (!dur) { alert('Eindtijd moet na begintijd liggen.'); return; }
+  const product=(document.getElementById('f-product').value||'').trim()||'COMPLAINTS';
+  const project=(document.getElementById('f-project').value||'').trim()||defProj();
+  entries.push({ id:Date.now(), date:curDate, start:s, end:e, client, desc, product, project, dur, exported:false });
+  entries.sort((a,b)=>a.start.localeCompare(b.start));
+  save(); render();
+  const [eh,em]=e.split(':').map(Number); setT('start',eh,em);
+  document.getElementById('ti-end').value='';
+  document.getElementById('f-desc').value='';
+  document.getElementById('f-project').value='';
+  document.getElementById('f-client').value=client;
+  updatePreview();
+  document.getElementById('ti-end').focus();
+}
+function updateProj(id, val) {
+  const x=entries.find(e=>e.id===id); if(x) { x.project=val||defProj(); save(); }
+}
+function toggleExp(id) {
+  const x=entries.find(e=>e.id===id); if(x) { x.exported=!x.exported; save(); render(); }
+}
+function delEntry(id) {
+  if (!confirm('Entry verwijderen?')) return;
+  entries=entries.filter(e=>e.id!==id); save(); render();
+}
+function save() {
+  saveEntries(curDate, entries);
+  refreshDataLists();
+}
+
+// ── Render entries ─────────────────────────────────────────────
+function render() {
+  const body=document.getElementById('tbl-body');
+  if (!entries.length) {
+    body.innerHTML='<div class="empty">// geen entries voor deze dag</div>';
+    document.getElementById('stat-dur').textContent='0u 0m';
+    document.getElementById('stat-n').textContent='0';
+    document.getElementById('exp-count').textContent='';
+    return;
+  }
+  body.innerHTML = entries.map(x=>`
+    <div class="trow${x.exported?' exp':''}">
+      <span style="display:flex;align-items:center;justify-content:center"><input type="checkbox" class="expchk" ${x.exported?'checked':''} onchange="toggleExp(${x.id})"></span>
+      <span class="dv">${fmtDate(x.date)}</span>
+      <span class="tv">${x.start}</span>
+      <span class="tv">${x.end}</span>
+      <span style="overflow:hidden"><span class="bp" style="overflow:hidden;text-overflow:ellipsis;max-width:100%;display:block" title="${esc(x.product)}">${esc(x.product)}</span></span>
+      <span><input class="iproj" value="${esc(x.project)}" onchange="updateProj(${x.id},this.value)" list="dl-projects" title="${esc(x.project)}"></span>
+      <span class="durv">${fmtDur(x.dur)}</span>
+      <span class="trunc">${esc(x.client)} — ${esc(x.desc)}</span>
+      <button class="bdel" onclick="delEntry(${x.id})" title="Verwijder"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
+    </div>`).join('');
+  const tot=entries.reduce((a,x)=>a+x.dur,0);
+  const pend=entries.filter(x=>!x.exported);
+  document.getElementById('stat-dur').textContent=fmtDur(tot);
+  document.getElementById('stat-n').textContent=entries.length;
+  document.getElementById('exp-count').textContent=pend.length>0?`${pend.length} te exporteren`:'alles geëxporteerd ✓';
+  document.getElementById('exp-count').style.color=pend.length>0?'var(--accent2)':'var(--green)';
+}
+
+// ── Navision export ────────────────────────────────────────────
+function exportNavision() {
+  const allKeys=Object.keys(localStorage).filter(k=>k.startsWith('ts_pwa_')).sort();
+  const pending=[];
+  allKeys.forEach(k=>{ try { JSON.parse(localStorage.getItem(k)||'[]').filter(x=>!x.exported).forEach(x=>pending.push({key:k,x})); } catch(e) {} });
+  if (!pending.length) { alert('Geen nieuwe entries — alles al geëxporteerd.'); return; }
+  const rows=pending.map(({x})=>[q(USER),q(fmtDate(x.date)),q(fmtTime(x.start)),q(fmtTime(x.end)),q(x.project),q(x.product),q(ACTIVITY),q(x.client+' - '+x.desc)].join(';'));
+  dl(rows.join('\r\n'), 'timesheet_'+isoToday()+'.csv', 'text/csv;charset=utf-8;');
+  pending.forEach(({key,x})=>{ const arr=JSON.parse(localStorage.getItem(key)||'[]'); const e=arr.find(a=>a.id===x.id); if(e) e.exported=true; localStorage.setItem(key,JSON.stringify(arr)); });
+  entries=loadEntries(curDate); render();
+}
+
+// ── Templates ──────────────────────────────────────────────────
+function saveTemplate() {
+  const client=(document.getElementById('f-client').value||'').trim();
+  const desc=(document.getElementById('f-desc').value||'').trim();
+  if (!client&&!desc) { alert('Vul minstens Klant of Omschrijving in.'); return; }
+  const name=prompt('Naam voor dit template:', (client?client+' — ':'')+desc);
+  if (!name) return;
+  const tpls=loadTemplates();
+  tpls.push({ id:Date.now(), name, client, desc, product:(document.getElementById('f-product').value||'').trim()||'COMPLAINTS', project:(document.getElementById('f-project').value||'').trim()||defProj() });
+  saveTemplates(tpls);
+  renderQuickTpls();
+  renderTemplates();
+}
+function applyTpl(tpl) {
+  document.getElementById('f-client').value=tpl.client||'';
+  document.getElementById('f-desc').value=tpl.desc||'';
+  document.getElementById('f-product').value=tpl.product||'COMPLAINTS';
+  document.getElementById('f-project').value=tpl.project===defProj()?'':tpl.project;
+  updatePreview();
+  document.getElementById('ti-end').focus();
+}
+function delTpl(id) {
+  if (!confirm('Template verwijderen?')) return;
+  saveTemplates(loadTemplates().filter(t=>t.id!==id));
+  renderQuickTpls(); renderTemplates();
+}
+function renderQuickTpls() {
+  const tpls=loadTemplates(), wrap=document.getElementById('quick-tpls');
+  if (!tpls.length) { wrap.innerHTML=`<span style="font-size:11px;color:var(--text3);font-family:var(--mono)">Geen templates — sla er een op via ⚡ Template</span>`; return; }
+  wrap.innerHTML=tpls.map(t=>`<button
+    style="height:28px;padding:0 10px;font-size:11px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;white-space:nowrap;font-family:var(--sans)"
+    title="${esc(t.client)} — ${esc(t.desc)}"
+    onmouseover="this.style.borderColor='#db0f16';this.style.color='#db0f16'"
+    onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'"
+    onclick='applyTpl(${JSON.stringify(t).replace(/'/g,"&#39;")})'>⚡ ${esc(t.name)}</button>`).join('');
+}
+function renderTemplates() {
+  const tpls=loadTemplates(), grid=document.getElementById('tpl-grid');
+  if (!tpls.length) { grid.innerHTML=`<div class="tpl-empty">// Nog geen templates<br><br>Vul een taak in en klik op <strong>⚡ Template</strong></div>`; return; }
+  grid.innerHTML=tpls.map(t=>`
+    <div class="tpl-card" onclick='applyTpl(${JSON.stringify(t).replace(/'/g,"&#39;")});showTab("dag")'>
+      <div class="tpl-name">${esc(t.name)}</div>
+      <div class="tpl-det">${esc(t.product)} · ${esc(t.project)}</div>
+      ${t.client?`<div class="tpl-det" style="margin-top:2px">${esc(t.client)}</div>`:''}
+      <button class="tpl-x" onclick="event.stopPropagation();delTpl(${t.id})">✕</button>
+    </div>`).join('');
+}
+
+// ── Week ───────────────────────────────────────────────────────
+function getWeekDates(offset) {
+  const now=new Date(), day=now.getDay();
+  const mon=new Date(now.getFullYear(), now.getMonth(), now.getDate()+offset*7-(day===0?6:day-1));
+  return Array.from({length:7},(_,i)=>{
+    const dd=new Date(mon.getFullYear(), mon.getMonth(), mon.getDate()+i);
+    return dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0');
+  });
+}
+function navWeek(d) { weekOff+=d; renderWeek(); }
+function renderWeek() {
+  const dates=getWeekDates(weekOff), todayStr=isoToday();
+  const d0=new Date(dates[0]+'T00:00:00'), d6=new Date(dates[6]+'T00:00:00');
+  document.getElementById('wlbl').textContent=d0.toLocaleDateString('nl-BE',{day:'numeric',month:'long'})+' – '+d6.toLocaleDateString('nl-BE',{day:'numeric',month:'long',year:'numeric'});
+  let totalMins=0; const clientTots={};
+  document.getElementById('wgrid').innerHTML=dates.map(date=>{
+    const de=loadEntries(date), dm=de.reduce((a,x)=>a+x.dur,0);
+    totalMins+=dm; de.forEach(x=>{ clientTots[x.client]=(clientTots[x.client]||0)+x.dur; });
+    const d=new Date(date+'T00:00:00'), isToday=date===todayStr;
+    const name=DAYS[d.getDay()]+' '+d.getDate()+' '+d.toLocaleDateString('nl-BE',{month:'short'});
+    return `<div class="wday${!de.length?' collapsed':''}">
+      <div class="wdhdr" onclick="this.parentElement.classList.toggle('collapsed')">
+        <span class="wdname${isToday?' today':''}">${name}${isToday?' ●':''}</span>
+        <span class="wdtot">${dm?fmtDur(dm):'—'}</span>
+      </div>
+      ${de.length?`<div class="wentries">${de.map(x=>`<div class="wrow"><span class="tv">${x.start}</span><span class="tv">${x.end}</span><span class="trunc" style="color:var(--text2)">${esc(x.client)} — ${esc(x.desc)}</span><span class="durv">${fmtDur(x.dur)}</span></div>`).join('')}</div>`:''}
+    </div>`;
+  }).join('');
+  document.getElementById('wtots').innerHTML=`<div class="wtots">
+    <div class="wtitle">Totalen per klant</div>
+    <div class="wstat-grid">${Object.entries(clientTots).sort((a,b)=>b[1]-a[1]).map(([c,m])=>`<div class="wstat"><div class="wstat-l">${esc(c)}</div><div class="wstat-v">${fmtDur(m)}</div></div>`).join('')}</div>
+    <div class="wgrand"><span class="wgrand-l">Totaal week</span><span class="wgrand-v">${fmtDur(totalMins)}</span></div>
+  </div>`;
+}
+
+// ── Data tab ───────────────────────────────────────────────────
+function renderDataTab() {
+  const all=getAllEntries();
+  const totalMins=all.reduce((a,x)=>a+x.dur,0);
+  const days=new Set(all.map(x=>x.date)).size;
+  const expCount=all.filter(x=>x.exported).length;
+  document.getElementById('data-stats').textContent=`${all.length} entries · ${days} dagen · ${fmtDur(totalMins)} · ${expCount} geëxporteerd`;
+  const months=[...new Set(all.map(x=>x.date.slice(0,7)))].sort().reverse();
+  const sel=document.getElementById('dt-month'), cur=sel.value;
+  sel.innerHTML='<option value="">Alle maanden</option>'+months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${new Date(m+'-01').toLocaleDateString('nl-BE',{month:'long',year:'numeric'})}</option>`).join('');
+  renderDataTable();
+}
+function renderDataTable() {
+  const all=getAllEntries();
+  const search=(document.getElementById('dt-search').value||'').toLowerCase();
+  const month=document.getElementById('dt-month').value;
+  const filtered=all.filter(x=>{
+    if (month && !x.date.startsWith(month)) return false;
+    if (search && ![x.client,x.desc,x.product,x.project,x.date].join(' ').toLowerCase().includes(search)) return false;
+    return true;
+  });
+  const body=document.getElementById('dt-body');
+  if (!filtered.length) { body.innerHTML='<div class="empty">// geen entries gevonden</div>'; return; }
+  body.innerHTML=filtered.map(x=>`
+    <div class="dtrow" style="${x.exported?'opacity:.45':''}">
+      <span class="dv">${fmtDate(x.date)}</span>
+      <span class="tv">${x.start}</span>
+      <span class="tv">${x.end}</span>
+      <span class="trunc">${esc(x.client)} — ${esc(x.desc)}</span>
+      <span><span class="bp">${esc(x.product)}</span></span>
+      <span class="durv">${fmtDur(x.dur)}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:${x.exported?'var(--green)':'var(--text3)'}">${x.exported?'✓ ja':'— nee'}</span>
+    </div>`).join('');
+}
+function exportAllCSV() {
+  const all=getAllEntries();
+  if (!all.length) { alert('Geen data.'); return; }
+  const hdr='Datum;Van;Tot;Duur (min);Klant;Omschrijving;Product;Project;Geexporteerd';
+  const rows=all.map(x=>[q(fmtDate(x.date)),q(x.start),q(x.end),x.dur,q(x.client),q(x.desc),q(x.product),q(x.project),x.exported?'ja':'nee'].join(';'));
+  dl(hdr+'\r\n'+rows.join('\r\n'), 'timesheet_alle_data_'+isoToday()+'.csv', 'text/csv;charset=utf-8;');
+}
+function exportJSON() {
+  const keys=Object.keys(localStorage).filter(k=>k.startsWith('ts_pwa_')||k==='ts_templates').sort();
+  const backup={version:1,exportDate:new Date().toISOString(),user:USER,data:{}};
+  keys.forEach(k=>{ try { backup.data[k]=JSON.parse(localStorage.getItem(k)||'[]'); } catch(e) {} });
+  dl(JSON.stringify(backup,null,2), 'timesheet_backup_'+isoToday()+'.json', 'application/json');
+}
+function onDrop(e) {
+  e.preventDefault();
+  e.currentTarget.style.borderColor='var(--border2)';
+  if (e.dataTransfer.files[0]) onFileImport(e.dataTransfer.files[0]);
+}
+function onFileImport(file) {
+  if (!file||!file.name.endsWith('.json')) { setImpMsg('Enkel JSON-bestanden zijn toegestaan.','err'); return; }
+  const r=new FileReader();
+  r.onload=ev=>{
+    try {
+      const b=JSON.parse(ev.target.result);
+      if (!b.data) { setImpMsg('Ongeldig formaat.','err'); return; }
+      const keys=Object.keys(b.data);
+      if (!keys.length) { setImpMsg('Backup is leeg.','err'); return; }
+      const merge=confirm(`Backup: ${keys.length} sleutels.\n\nOK = samenvoegen\nAnnuleer = alles overschrijven`);
+      if (!merge) Object.keys(localStorage).filter(k=>k.startsWith('ts_')).forEach(k=>localStorage.removeItem(k));
+      keys.forEach(k=>{
+        if (merge && k.startsWith('ts_pwa_')) {
+          const existing=JSON.parse(localStorage.getItem(k)||'[]');
+          const inc=b.data[k]||[];
+          const ids=new Set(existing.map(x=>x.id));
+          localStorage.setItem(k, JSON.stringify([...existing,...inc.filter(x=>!ids.has(x.id))].sort((a,b)=>(a.start||'').localeCompare(b.start||''))));
+        } else {
+          localStorage.setItem(k, JSON.stringify(b.data[k]));
+        }
+      });
+      entries=loadEntries(curDate);
+      render(); renderQuickTpls(); renderDataTab();
+      setImpMsg(`✓ ${keys.length} sleutels geïmporteerd (${b.exportDate?new Date(b.exportDate).toLocaleDateString('nl-BE'):''})`, 'ok');
+    } catch(err) { setImpMsg('Fout: '+err.message,'err'); }
+  };
+  r.readAsText(file);
+}
+function setImpMsg(msg, type) {
+  const el=document.getElementById('import-msg');
+  el.textContent=msg; el.style.color=type==='ok'?'var(--green)':'var(--red)';
+}
+
+// ── Download helper ────────────────────────────────────────────
+function dl(content, filename, mime) {
+  const blob=new Blob([content],{type:mime});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
+}
+
+// ── Auto-backup to server ──────────────────────────────────────
+async function pushBackup() {
+  try {
+    const keys=Object.keys(localStorage).filter(k=>k.startsWith('ts_pwa_')||k==='ts_templates').sort();
+    const backup={version:1,exportDate:new Date().toISOString(),user:USER,data:{}};
+    keys.forEach(k=>{ try { backup.data[k]=JSON.parse(localStorage.getItem(k)||'[]'); } catch(e) {} });
+    await fetch('/api/save-backup',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(backup) });
+  } catch(e) {} // server might not be running (PWA mode)
+}
+setInterval(pushBackup, 5*60*1000);
+setTimeout(pushBackup, 3000);
+
+// ── Service Worker ─────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    const regs=await navigator.serviceWorker.getRegistrations();
+    for (const r of regs) await r.unregister();
+    const keys=await caches.keys();
+    for (const k of keys) await caches.delete(k);
+    navigator.serviceWorker.register('sw.js?v=14').catch(()=>{});
+  });
+}
+
+// ── Start ──────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
