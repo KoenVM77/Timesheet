@@ -851,12 +851,8 @@ setTimeout(pushBackup, 3000);
 
 // ── Service Worker ─────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', async () => {
-    const regs=await navigator.serviceWorker.getRegistrations();
-    for (const r of regs) await r.unregister();
-    const keys=await caches.keys();
-    for (const k of keys) await caches.delete(k);
-    navigator.serviceWorker.register('sw.js?v=14').catch(()=>{});
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
   });
 }
 
